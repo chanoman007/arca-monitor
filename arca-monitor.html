@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ARCA">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="#" id="manifest-placeholder">
+<title>ARCA Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111;
+    --border: #1e1e1e;
+    --text: #c8c8c8;
+    --dim: #444;
+    --online: #00e676;
+    --offline: #ff1744;
+    --timeout: #ff9100;
+    --accent: #00b4d8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  header {
+    padding: 32px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .logo {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  .global-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin-top: 14px;
+  }
+
+  .pulse-ring {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--dim);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .pulse-ring.online  { background: var(--online);  box-shadow: 0 0 0 0 var(--online); animation: ping 1.5s infinite; }
+  .pulse-ring.offline { background: var(--offline); box-shadow: 0 0 6px var(--offline); }
+  .pulse-ring.timeout { background: var(--timeout); }
+
+  @keyframes ping {
+    0%   { box-shadow: 0 0 0 0 rgba(0,230,118,0.6); }
+    70%  { box-shadow: 0 0 0 8px rgba(0,230,118,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,230,118,0); }
+  }
+
+  .install-hint {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-align: right;
+    line-height: 1.5;
+  }
+
+  main {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.4s;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: transparent;
+    transition: background 0.4s;
+  }
+
+  .card.online  { border-color: #1a3d2b; }
+  .card.online::before  { background: linear-gradient(90deg, transparent, var(--online), transparent); }
+  .card.offline { border-color: #3d1a1a; }
+  .card.offline::before { background: linear-gradient(90deg, transparent, var(--offline), transparent); }
+
+  .card-name {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1px;
+  }
+
+  .card-env {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 3px 0 14px;
+  }
+
+  .card-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dim);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .card-status.online  { color: var(--online); }
+  .card-status.offline { color: var(--offline); }
+  .card-status.timeout { color: var(--timeout); }
+
+  .card-ms {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    margin-top: 6px;
+  }
+
+  footer {
+    padding: 16px 20px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+  }
+
+  .ts {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  button {
+    background: var(--surface);
+    border: 1px solid #333;
+    color: #aaa;
+    padding: 10px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+  }
+
+  button:active { background: #1a1a1a; transform: scale(0.97); }
+
+  .checking-overlay {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,180,216,0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .checking-overlay.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <div class="logo">ARCA / AFIP</div>
+      <h1>WS Monitor</h1>
+    </div>
+    <div class="install-hint" id="install-hint" style="display:none">
+      ⬆ Compartir<br>+ Pantalla inicio
+    </div>
+  </div>
+  <div class="global-badge">
+    <div class="pulse-ring" id="global-dot"></div>
+    <span id="global-label">VERIFICANDO...</span>
+  </div>
+</header>
+
+<main id="grid">
+  <div class="card" id="c0"><div class="card-name">WSAA</div><div class="card-env">HOMOLOGACIÓN</div><div class="card-status" id="s0">—</div><div class="card-ms" id="m0"></div></div>
+  <div class="card" id="c1"><div class="card-name">WSAA</div><div class="card-env">PRODUCCIÓN</div><div class="card-status" id="s1">—</div><div class="card-ms" id="m1"></div></div>
+  <div class="card" id="c2"><div class="card-name">WSFE</div><div class="card-env">HOMOLOGACIÓN</div><div class="card-status" id="s2">—</div><div class="card-ms" id="m2"></div></div>
+  <div class="card" id="c3"><div class="card-name">WSFE</div><div class="card-env">PRODUCCIÓN</div><div class="card-status" id="s3">—</div><div class="card-ms" id="m3"></div></div>
+</main>
+
+<div class="checking-overlay" id="overlay">VERIFICANDO...</div>
+
+<footer>
+  <div class="ts" id="ts">—</div>
+  <button onclick="checkAll()">VERIFICAR</button>
+</footer>
+
+<script>
+const urls = [
+  "https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl",
+  "https://wsaa.afip.gov.ar/ws/services/LoginCms?wsdl",
+  "https://wswhomo.afip.gov.ar/wsfev1/service.asmx?wsdl",
+  "https://servicios1.afip.gov.ar/wsfev1/service.asmx?wsdl"
+];
+
+async function check(i) {
+  const t = performance.now();
+  try {
+    await fetch(urls[i], { mode: "no-cors", cache: "no-store" });
+    const ms = Math.round(performance.now() - t);
+    update(i, "ONLINE", ms);
+  } catch {
+    update(i, "OFFLINE", null);
+  }
+}
+
+function update(i, status, ms) {
+  const cls = status.toLowerCase();
+  document.getElementById("c" + i).className = "card " + cls;
+  const el = document.getElementById("s" + i);
+  el.textContent = (status === "ONLINE" ? "● " : "○ ") + status;
+  el.className = "card-status " + cls;
+  document.getElementById("m" + i).textContent = ms ? ms + " ms" : "";
+  updateGlobal();
+}
+
+function updateGlobal() {
+  const statuses = [0,1,2,3].map(i => document.getElementById("s"+i).className);
+  const anyOffline = statuses.some(c => c.includes("offline"));
+  const allOnline = statuses.every(c => c.includes("online"));
+  const dot = document.getElementById("global-dot");
+  const lbl = document.getElementById("global-label");
+  if (allOnline) {
+    dot.className = "pulse-ring online";
+    lbl.textContent = "OPERACIONAL";
+  } else if (anyOffline) {
+    dot.className = "pulse-ring offline";
+    lbl.textContent = "DEGRADADO";
+  } else {
+    dot.className = "pulse-ring";
+    lbl.textContent = "VERIFICANDO...";
+  }
+}
+
+async function checkAll() {
+  const overlay = document.getElementById("overlay");
+  overlay.classList.add("show");
+  await Promise.all(urls.map((_, i) => check(i)));
+  overlay.classList.remove("show");
+  const now = new Date();
+  document.getElementById("ts").innerHTML =
+    "Última verificación<br>" + now.toLocaleTimeString("es-AR");
+}
+
+// iOS install hint
+if (/iphone|ipad/i.test(navigator.userAgent) && !navigator.standalone) {
+  document.getElementById("install-hint").style.display = "block";
+}
+
+checkAll();
+setInterval(checkAll, 30000);
+</script>
+</body>
+</html>
